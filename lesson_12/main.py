@@ -1,15 +1,21 @@
 from sqlalchemy.orm import sessionmaker, Session
 
-from models import Base, User, Profile, Address, Product
+from models import Base, User, Profile, Address, Product, Shoplist
 from utils import setup_db_engine, create_database_if_not_exists
 
+engine = setup_db_engine()
+create_database_if_not_exists(engine=engine)
+
+Base.metadata.create_all(engine)
+CurrentSession = sessionmaker(bind=engine)
+current_session = CurrentSession()
 
 def create_user(
-        session: Session, email: str, password: str, phone: str, age: int, city: str, address: str
+    session: Session, email: str, password: str, phone: str, age: int, city: str, address: str
 ) -> User:
     user = User(email=email, password=password)
-    profile = Profile(phone=phone, age=age)
-    address = Address(city=city, address=address)
+    profile = Profile(user=user, phone=phone, age=age)
+    address = Address(user=user, city=city, address=address)
 
     session.add_all([user, profile, address])
     session.commit()
@@ -17,22 +23,22 @@ def create_user(
     return user
 
 
-def update_or_create(session: Session, user: User, city: str, address: str) -> Address:
+def update_or_create_address(session: Session, user: User, city: str, address: str) -> Address:
     if len(user.addresses):
         current_address = user.addresses[0]
         current_address.city = city
         current_address.address = address
     else:
-        current_session = Address(user=user, city=city, address=address)
+        current_address = Address(user=user, city=city, address=address)
 
-    session.add(address)
+    session.add(current_address)
     session.commit()
 
-    # return current_session
+    return current_address
 
 
 def create_product(
-        session: Session, name: str, price: int, ammount: int, comment: str
+    session: Session, name: str, price: int, ammount: int, comment: str
 ) -> Product:
     product = Product(name=name, price=price, ammount=ammount, comment=comment)
 
@@ -42,75 +48,92 @@ def create_product(
     return product
 
 
-def get_product(
-        session: Session, name: str, price: int, ammount: int, comment: str
-) -> Product:
-    product = Product(name=name, price=price, ammount=ammount, comment=comment)
+def get_product(session: Session):
+    result = session.query(Product.id, Product.name, Product.price, Product.ammount, Product.comment).all()
+    print(result)
 
-    product_list = session.get(product)
+
+def update_product(session: Session, id: int, name: str, price: int, ammount: int, comment: str):
+    session.query(Product).filter_by(id=id).update({"name": name, "price": price, "ammount": ammount, "comment": comment})
     session.commit()
 
-    return product_list
+
+def delete_product(session: Session, id: int):
+    session.query(Product).filter_by(id=id).delete()
+    session.commit()
 
 
-def update_or_create_product(session: Session, name: str, price: int, ammount: int, comment: str) -> Product:
-    if len(product.id):
-        current_product = product.addresses[0]
-        current_product.name = name
-        current_product.price = price
-        current_product.ammount = ammount
-        current_product.comment = comment
+def buy_purchase(session: Session, user_id: int, product_id: int, ammount: int):
+    purchase = Shoplist(user_id=user_id, product_id=product_id, ammount=ammount)
+    session.add(purchase)
+    session.commit()
+
+    return purchase
+
+
+def show_user_purchase(session: Session, user_id: int):
+    shoplist = session.query(Shoplist).filter_by(user_id=user_id).all
+    return shoplist
+
+
+def filter_purchase(session: Session, amount: int):
+    if session.query(Shoplist).filter(amount > 0):
+        print("Available")
     else:
-        current_session = Product(name=name, price=price, ammount=ammount, comment=comment)
-
-    session.add(product)
-    session.commit()
-
-    return current_session
+        print("Not available")
 
 
-def delete_product(
-        session: Session, name: str, price: int, ammount: int, comment: str
-) -> Product:
-    product = Product(name=name, price=price, ammount=ammount, comment=comment)
-
-    session.delete(product)
-    session.commit()
-
-    return product
+# if __name__ == "__main__":
+#     engine = setup_db_engine()
+#     create_database_if_not_exists(engine=engine)
+#
+#     Base.metadata.create_all(engine)
+#     CurrentSession = sessionmaker(bind=engine)
+#     current_session = CurrentSession()
 
 
+    # read = get_product(
+    #     session=current_session)
 
-if __name__ == "__main__":
-    engine = setup_db_engine()
-    create_database_if_not_exists(engine=engine)
 
-    # Base.metadata.create_all(engine)
-    CurrentSession = sessionmaker(bind=engine)
-    current_session = CurrentSession()
+    # delete = delete_product(
+    #     session=current_session,
+    #     id=2)
+
+
+    # update_pr = update_product(
+    #     session=current_session,
+    #     id= 2,
+    #     name= "notebook",
+    #     price= 700,
+    #     ammount= 3,
+    #     comment= "test"
+    # )
+
 
     # new_user = create_user(
     #     session=current_session,
-    #     email="test@gmail.com",
-    #     password="test0pass",
-    #     phone="80295554433",
-    #     age=25,
-    #     city="NY",
-    #     address="street_num"
+    #     email="test@test.com",
+    #     password="password",
+    #     phone="+375292992929",
+    #     age=20,
+    #     city="City",
+    #     address="Address 123",
     # )
 
     # user = current_session.query(User).filter_by(email="test@test.com").first()
-    # update_or_create(
+    # update_or_create_address(
     #     session=current_session,
     #     user=user,
-    #     city="Old city",
-    #     address="Old_address"
+    #     city="Old City",
+    #     address="Old Address 123"
     # )
-
-    new_product = create_product(
-        session=current_session,
-        name="TV-set",
-        price=1500,
-        ammount=100,
-        comment="25"
-    )
+    #
+    #
+    # new_product = create_product(
+    #     session=current_session,
+    #     name="PS5",
+    #     price=3500,
+    #     ammount=20,
+    #     comment="5"
+    # )

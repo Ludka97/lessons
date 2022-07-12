@@ -42,18 +42,15 @@ class Product(Base):
     price = Column(Integer)
     ammount = Column(Integer)
     comment = Column(String)
-    #
-    # user_id = Column(Integer, ForeignKey("user.id"))
-    # user = relationship("User", back_populates="product")
+
+    shoplist = relationship("Shoplist", back_populates="product")
 
 
-# class ShopList(Base):
-#     __tablename__ = "shoplist"
-#     id = Column(Integer, primary_key=True)
-#     name = Column(String)
-#     price = Column(Integer)
-#     ammount = Column(Integer)
-#     comment = Column(String)
-#
-#     user_id = Column(Integer, ForeignKey("user.id"))
-#     user = relationship("User", back_populates="shoplist")
+class Shoplist(Base):
+    __tablename__ = "shoplist"
+    id = Column(Integer, primary_key=True)
+    amount = Column(Integer)
+
+    user_id = Column(Integer, ForeignKey("user.id"))
+    product_id = Column(Integer, ForeignKey("product.id"))
+    product = relationship("Product", back_populates="shoplist")
